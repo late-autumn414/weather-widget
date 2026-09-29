@@ -58,6 +58,9 @@ weather-widget/
 │   ├── weather_ui.py          # 桌面窗口 UI 模块
 │   ├── settings_dialog.py     # 城市设置对话框（含搜索功能）
 │   └── config_manager.py      # 配置管理模块
+├── packaging/
+│   ├── build_deb.sh           # deb 打包构建脚本
+│   └── test_build_deb.sh      # 打包脚本单元测试
 ├── requirements.txt           # 依赖清单
 ├── README.md                  # 项目说明文档
 └── setup.sh                   # 一键安装/卸载脚本
@@ -72,6 +75,22 @@ weather-widget/
 - **Tkinter**: 一般系统自带（如缺少，`sudo apt install python3-tk`）
 - **Pillow**: 可选，用于背景图片支持（`pip3 install Pillow`）
 - **网络**: 需要互联网连接获取天气数据
+
+### deb 包安装（推荐）
+
+```bash
+# 构建 deb 包（需要 dpkg-deb，Debian 系发行版自带）
+./packaging/build_deb.sh
+
+# 安装（自动处理 python3 / python3-tk 依赖）
+sudo apt install ./dist/weather-widget_2.0.0_all.deb
+
+# 启动（应用菜单点击「天气小工具」，或命令行）
+weather-widget
+
+# 卸载
+sudo apt remove weather-widget
+```
 
 ### 一键安装
 
@@ -236,9 +255,35 @@ python3 -c "from src.weather_api import get_weather_data; print(get_weather_data
 # 一键安装（生成桌面快捷方式 + 开机自启）
 chmod +x setup.sh && ./setup.sh install
 
+# 构建 deb 包（产物输出到 dist/）
+./packaging/build_deb.sh
+
+# 构建前运行打包脚本单元测试
+./packaging/test_build_deb.sh
+
+# 自定义版本/维护者/输出目录
+DEB_VERSION=2.0.0 DEB_MAINTAINER="Your Name <you@example.com>" \
+    ./packaging/build_deb.sh -o /tmp/debs
+
+# 可复现构建（固定时间戳，两次构建产物字节级一致）
+SOURCE_DATE_EPOCH=1700000000 ./packaging/build_deb.sh
+
 # 构建发布包
 zip -r weather-widget-v2.0.0.zip . -x ".git/*" -x "*__pycache__*" -x "*.pyc"
 ```
+
+### deb 包内容布局
+
+| 安装路径 | 说明 |
+|----------|------|
+| `/usr/lib/weather-widget/` | 应用主体（src/ + assets/ + requirements.txt） |
+| `/usr/bin/weather-widget` | 启动器命令 |
+| `/usr/share/applications/weather-widget.desktop` | 应用菜单入口 |
+| `/usr/share/icons/hicolor/` | 图标（PNG 128x128 + SVG） |
+| `/usr/share/doc/weather-widget/` | copyright 与 changelog |
+
+> 依赖声明：`Depends: python3 (>= 3.8), python3-tk`，`Recommends: python3-pil`（可选背景图支持），
+> 由 apt 安装时自动处理；用户配置仍保存在 `~/.config/weather-widget/`，卸载不丢失。
 
 > **可复现性说明**：`requirements.txt` 中所有依赖均以 `==` 锁定精确版本，
 > 配合虚拟环境即可在任意 Linux 发行版上获得一致的构建结果。
